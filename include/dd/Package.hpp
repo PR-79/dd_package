@@ -2303,6 +2303,14 @@ namespace dd {
             return f;
         }
 
+        bool isTranspose(mEdge& e){
+            auto tol = ComplexTable<>::tolerance();
+            auto v = CTEntry::val(e.w.r);
+            if (v >= transpose_weight_shift-1.0-tol && v <= transpose_weight_shift+1.0+tol)
+                return true;
+            return false;
+        }
+
         mEdge reduceTranspose(mEdge& e){
             if (e.isTerminal())
                 return e;
@@ -2316,23 +2324,19 @@ namespace dd {
                     mEdge t = transpose(e.p->e[j]);
                     if (t.isTerminal())
                         continue;
-                    std::cout <<"a";
                     if (c.p == t.p){
-                        std::cout <<"b";
+                        // std::cout <<"b";
                         auto magc = ComplexNumbers::mag2(c.w);
                         auto magt = ComplexNumbers::mag2(t.w);
-                        // std::cout <<e.p->e[j].w.r->value-0.1;
                         if (magc - magt > ComplexTable<>::tolerance()){
                             e.p->e[j].p = e.p->e[i].p;
-                            // auto cte = CTEntry {16+e.p->e[j].w.r->value, nullptr, 1};
                             e.p->e[j].w = cn.lookup(transpose_weight_shift+CTEntry::val(e.p->e[j].w.r), CTEntry::val(e.p->e[j].w.i));
-                            // std::cout <<e.p->e[j].p->e[0].w.r->value;
+                            // std::cout << isTranspose(e.p->e[j]);
                         }
                         else{
                             e.p->e[i].p = e.p->e[j].p;
-                            // e.p->e[i].w.r->value += 16;
                             e.p->e[i].w = cn.lookup(transpose_weight_shift+CTEntry::val(e.p->e[i].w.r), CTEntry::val(e.p->e[i].w.i));
-                            // std::cout <<e.p->e[i].p->e[0].w.r->value;
+                            // std::cout << isTranspose(e.p->e[i]);
                         }
                     }
                 }
