@@ -85,7 +85,7 @@ namespace dd {
         ComplexNumbers cn{};
 
         // weight level shift for marking transposition in dd
-        const fp transpose_weight_shift = 4.0;
+        static constexpr fp transpose_weight_shift = 4.0;
 
         ///
         /// Construction, destruction, information and reset
@@ -2303,12 +2303,22 @@ namespace dd {
             return f;
         }
 
-        bool isTranspose(mEdge& e){
+        static bool isTranspose(mEdge& e){
             auto tol = ComplexTable<>::tolerance();
             auto v = CTEntry::val(e.w.r);
             if (v >= transpose_weight_shift-1.0-tol && v <= transpose_weight_shift+1.0+tol)
                 return true;
             return false;
+        }
+
+        mEdge shiftN2T(mEdge& e){
+            e.w = cn.lookup(transpose_weight_shift+CTEntry::val(e.w.r), CTEntry::val(e.w.i));
+            return e;
+        }
+
+        mEdge shiftT2N(mEdge& e){
+            e.w = cn.lookup(-transpose_weight_shift+CTEntry::val(e.w.r), CTEntry::val(e.w.i));
+            return e;
         }
 
         mEdge reduceTranspose(mEdge& e){
@@ -2330,12 +2340,12 @@ namespace dd {
                         auto magt = ComplexNumbers::mag2(t.w);
                         if (magc - magt > ComplexTable<>::tolerance()){
                             e.p->e[j].p = e.p->e[i].p;
-                            e.p->e[j].w = cn.lookup(transpose_weight_shift+CTEntry::val(e.p->e[j].w.r), CTEntry::val(e.p->e[j].w.i));
+                            e.p->e[j] = shiftN2T(e.p->e[j]);
                             // std::cout << isTranspose(e.p->e[j]);
                         }
                         else{
                             e.p->e[i].p = e.p->e[j].p;
-                            e.p->e[i].w = cn.lookup(transpose_weight_shift+CTEntry::val(e.p->e[i].w.r), CTEntry::val(e.p->e[i].w.i));
+                            e.p->e[i] = shiftN2T(e.p->e[i]);
                             // std::cout << isTranspose(e.p->e[i]);
                         }
                     }
@@ -2752,16 +2762,29 @@ namespace dd {
 
             // recursive case
             if (!e.p->e[0].w.approximatelyZero()) {
-                getMatrix(e.p->e[0], c, i, j, mat);
+                if (isTranspose(e.p->e[0]))
+                    getMatrix(transpose(shiftT2N(e.p->e[0])), c, i, j, mat);
+                else
+                    getMatrix(e.p->e[0], c, i, j, mat);
             }
             if (!e.p->e[1].w.approximatelyZero()) {
-                getMatrix(e.p->e[1], c, i, y, mat);
+                if (isTranspose(e.p->e[1]))
+                    getMatrix(transpose(shiftT2N(e.p->e[1])), c, i, y, mat);
+                else
+                    getMatrix(e.p->e[1], c, i, y, mat);
             }
             if (!e.p->e[2].w.approximatelyZero()) {
-                getMatrix(e.p->e[2], c, x, j, mat);
+                if (isTranspose(e.p->e[2]))
+                    getMatrix(transpose(shiftT2N(e.p->e[2])), c, x, j, mat);
+                else
+                    getMatrix(e.p->e[2], c, x, j, mat);
             }
             if (!e.p->e[3].w.approximatelyZero()) {
-                getMatrix(e.p->e[3], c, x, y, mat);
+                if (isTranspose(e.p->e[3]))
+                    getMatrix(transpose(shiftT2N(e.p->e[3])), c, x, y, mat);
+                else
+                    getMatrix(e.p->e[3], c, x, y, mat);
+
             }
             cn.returnToCache(c);
         }

@@ -754,7 +754,24 @@ namespace dd {
                     os << " (";
                     if (!edge.w.approximatelyZero()) {
                         const std::int64_t edgeIdx = edge.isTerminal() ? -1 : nodeIndex[edge.p];
-                        os << edgeIdx << " " << edge.w.toString(false, 16);
+                        
+                        auto ddp= std::make_unique<dd::Package<>>(1);
+                        if (ddp->isTranspose(edge)){
+                            auto tol = ComplexTable<>::tolerance();
+                            auto re = CTEntry::val(edge.w.r) - ddp->transpose_weight_shift;
+                            auto im = CTEntry::val(edge.w.i);
+                            os << edgeIdx << " ";
+                            if (std::abs(re) > tol)
+                                os<< re;
+                            if (std::abs(im) > tol){
+                                if (im>0)
+                                    os<<"+";
+                                os<<im<<"i";
+                            }
+                            os << "T";
+                        }
+                        else
+                            os << edgeIdx << " " << edge.w.toString(false, 16);
                     }
                     os << ")";
                 }
