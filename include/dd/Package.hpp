@@ -2348,6 +2348,7 @@ namespace dd {
                             e.p->e[i] = shiftN2T(e.p->e[i]);
                             // std::cout << isTranspose(e.p->e[i]);
                         }
+                        // break;
                     }
                 }
             }
@@ -2762,26 +2763,34 @@ namespace dd {
 
             // recursive case
             if (!e.p->e[0].w.approximatelyZero()) {
-                if (isTranspose(e.p->e[0]))
+                if (isTranspose(e.p->e[0])){
                     getMatrix(transpose(shiftT2N(e.p->e[0])), c, i, j, mat);
+                    e.p->e[0]=shiftN2T(e.p->e[0]);
+                }
                 else
                     getMatrix(e.p->e[0], c, i, j, mat);
             }
             if (!e.p->e[1].w.approximatelyZero()) {
-                if (isTranspose(e.p->e[1]))
+                if (isTranspose(e.p->e[1])){
                     getMatrix(transpose(shiftT2N(e.p->e[1])), c, i, y, mat);
+                    e.p->e[1]=shiftN2T(e.p->e[1]);
+                }
                 else
                     getMatrix(e.p->e[1], c, i, y, mat);
             }
             if (!e.p->e[2].w.approximatelyZero()) {
-                if (isTranspose(e.p->e[2]))
+                if (isTranspose(e.p->e[2])){
                     getMatrix(transpose(shiftT2N(e.p->e[2])), c, x, j, mat);
+                    e.p->e[2]=shiftN2T(e.p->e[2]);
+                }
                 else
                     getMatrix(e.p->e[2], c, x, j, mat);
             }
             if (!e.p->e[3].w.approximatelyZero()) {
-                if (isTranspose(e.p->e[3]))
+                if (isTranspose(e.p->e[3])){
                     getMatrix(transpose(shiftT2N(e.p->e[3])), c, x, y, mat);
+                    e.p->e[3]=shiftN2T(e.p->e[3]);
+                }
                 else
                     getMatrix(e.p->e[3], c, x, y, mat);
 
