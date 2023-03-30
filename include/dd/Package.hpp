@@ -2748,54 +2748,35 @@ namespace dd {
             return mat;
         }
         void getMatrix(const mEdge& e, const Complex& amp, std::size_t i, std::size_t j, CMat& mat) {
-            // calculate new accumulated amplitude
-            auto c = cn.mulCached(e.w, amp);
+            // calculate new accumulated amplitude\
+            auto r = e;
+            if (isTranspose(r))
+                r = transpose(shiftT2N(r));
 
+            auto c = cn.mulCached(r.w, amp);
+            
             // base case
-            if (e.isTerminal()) {
+            if (r.isTerminal()) {
                 mat.at(i).at(j) = {CTEntry::val(c.r), CTEntry::val(c.i)};
                 cn.returnToCache(c);
                 return;
             }
 
-            const std::size_t x = i | (1ULL << e.p->v);
-            const std::size_t y = j | (1ULL << e.p->v);
+            const std::size_t x = i | (1ULL << r.p->v);
+            const std::size_t y = j | (1ULL << r.p->v); 
 
             // recursive case
-            if (!e.p->e[0].w.approximatelyZero()) {
-                if (isTranspose(e.p->e[0])){
-                    getMatrix(transpose(shiftT2N(e.p->e[0])), c, i, j, mat);
-                    e.p->e[0]=shiftN2T(e.p->e[0]);
-                }
-                else
-                    getMatrix(e.p->e[0], c, i, j, mat);
-            }
-            if (!e.p->e[1].w.approximatelyZero()) {
-                if (isTranspose(e.p->e[1])){
-                    getMatrix(transpose(shiftT2N(e.p->e[1])), c, i, y, mat);
-                    e.p->e[1]=shiftN2T(e.p->e[1]);
-                }
-                else
-                    getMatrix(e.p->e[1], c, i, y, mat);
-            }
-            if (!e.p->e[2].w.approximatelyZero()) {
-                if (isTranspose(e.p->e[2])){
-                    getMatrix(transpose(shiftT2N(e.p->e[2])), c, x, j, mat);
-                    e.p->e[2]=shiftN2T(e.p->e[2]);
-                }
-                else
-                    getMatrix(e.p->e[2], c, x, j, mat);
-            }
-            if (!e.p->e[3].w.approximatelyZero()) {
-                if (isTranspose(e.p->e[3])){
-                    getMatrix(transpose(shiftT2N(e.p->e[3])), c, x, y, mat);
-                    e.p->e[3]=shiftN2T(e.p->e[3]);
-                }
-                else
-                    getMatrix(e.p->e[3], c, x, y, mat);
-
-            }
+            if (!r.p->e[0].w.approximatelyZero()) 
+                getMatrix(r.p->e[0], c, i, j, mat);
+            if (!r.p->e[1].w.approximatelyZero()) 
+                getMatrix(r.p->e[1], c, i, y, mat);
+            if (!r.p->e[2].w.approximatelyZero()) 
+                getMatrix(r.p->e[2], c, x, j, mat);
+            if (!r.p->e[3].w.approximatelyZero()) 
+                getMatrix(r.p->e[3], c, x, y, mat);
+                
             cn.returnToCache(c);
+            r = transpose(shiftN2T(r));
         }
 
         CMat getDensityMatrix(dEdge& e) {
