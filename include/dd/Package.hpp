@@ -2748,7 +2748,7 @@ namespace dd {
             return mat;
         }
         void getMatrix(const mEdge& e, const Complex& amp, std::size_t i, std::size_t j, CMat& mat) {
-            // calculate new accumulated amplitude\
+            // calculate new accumulated amplitude
             auto r = e;
             if (isTranspose(r))
                 r = transpose(shiftT2N(r));
