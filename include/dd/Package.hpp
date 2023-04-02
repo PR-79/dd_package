@@ -2324,40 +2324,45 @@ namespace dd {
         mEdge reduceTranspose(mEdge& e){
             if (e.isTerminal())
                 return e;
+            auto r = e;
             for (auto i = 0U; i < 4; i++) {
-                auto c = e.p->e[i];
-                if (c.isTerminal())
+                auto c = r.p->e[i];
+                if (c.isTerminal() || c.p->isSymmetric())
                     continue;
-                for (auto j = i+1; j < 4; j++){
-                    if (e.p->e[i] == e.p->e[j])
-                        continue;
-                    mEdge t = transpose(e.p->e[j]);
-                    if (t.isTerminal())
-                        continue;
-                    if (c.p == t.p){
-                        // std::cout <<"b";
-                        auto magc = ComplexNumbers::mag2(c.w);
-                        auto magt = ComplexNumbers::mag2(t.w);
-                        if (magc - magt > ComplexTable<>::tolerance()){
-                            e.p->e[j].p = e.p->e[i].p;
-                            e.p->e[j] = shiftN2T(e.p->e[j]);
-                            // std::cout << isTranspose(e.p->e[j]);
-                        }
-                        else{
-                            e.p->e[i].p = e.p->e[j].p;
-                            e.p->e[i] = shiftN2T(e.p->e[i]);
-                            // std::cout << isTranspose(e.p->e[i]);
-                        }
-                        // break;
+                auto prevNodeCount = mUniqueTable.getNodeCount();
+                auto t = transpose(c);
+                t = mUniqueTable.lookup(t);
+                if (mUniqueTable.getNodeCount() == prevNodeCount){
+                    // auto magt = ComplexNumbers::mag2(t.w);
+                    // only link transpose if transpose is more common (fewer T edges in final diagram)
+                    if (c.p->ref < t.p->ref){
+                        auto temp = c;
+                        c.p = t.p;
+                        c = shiftN2T(c);
+                        if (temp.p->ref)
+                            decRef(temp);
+                        incRef(t);
+                        // std::cout << isTranspose(e.p->e[j]);
                     }
+                    else if (c.p->ref == t.p->ref){
+                        // keep node with lower id
+                        if (c.p->v >= t.p->v){
+                            auto temp = c;
+                            c.p = t.p;
+                            c = shiftN2T(c);
+                            if (temp.p->ref)
+                                decRef(temp);
+                            incRef(t);
+                        }
+                    }
+                    r.p->e[i] = c;
                 }
             }
-            e.p->e[0] = reduceTranspose(e.p->e[0]);
-            e.p->e[1] = reduceTranspose(e.p->e[1]);
-            e.p->e[2] = reduceTranspose(e.p->e[2]);
-            e.p->e[3] = reduceTranspose(e.p->e[3]);
-            // e.w = Complex::zero;
-            return e;
+            r.p->e[0] = reduceTranspose(r.p->e[0]);
+            r.p->e[1] = reduceTranspose(r.p->e[1]);
+            r.p->e[2] = reduceTranspose(r.p->e[2]);
+            r.p->e[3] = reduceTranspose(r.p->e[3]);
+            return r;
         }
 
     private:
