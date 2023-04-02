@@ -2322,7 +2322,7 @@ namespace dd {
         }
 
         mEdge reduceTranspose(mEdge& e){
-            if (e.isTerminal())
+            if (e.isTerminal() || e.p->flags == (std::uint8_t) 64)
                 return e;
             auto r = e;
             for (auto i = 0U; i < 4; i++) {
@@ -2331,6 +2331,9 @@ namespace dd {
                     continue;
                 auto prevNodeCount = mUniqueTable.getNodeCount();
                 auto t = transpose(c);
+                if (mUniqueTable.nodesAreEqual(t.p, c.p)){
+                    continue;
+                }
                 t = mUniqueTable.lookup(t);
                 if (mUniqueTable.getNodeCount() == prevNodeCount){
                     // auto magt = ComplexNumbers::mag2(t.w);
@@ -2362,6 +2365,7 @@ namespace dd {
             r.p->e[1] = reduceTranspose(r.p->e[1]);
             r.p->e[2] = reduceTranspose(r.p->e[2]);
             r.p->e[3] = reduceTranspose(r.p->e[3]);
+            r.p->flags = (std::uint8_t) 64;
             return r;
         }
 
