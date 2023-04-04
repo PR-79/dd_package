@@ -2320,8 +2320,14 @@ namespace dd {
             e.w = cn.lookup(-transpose_weight_shift+CTEntry::val(e.w.r), CTEntry::val(e.w.i));
             return e;
         }
-
+        
         mEdge reduceTranspose(mEdge& e){
+            mEdge r = reduceTransposeRecursive(e);
+            garbageCollect();
+            return r;
+        }
+
+        mEdge reduceTransposeRecursive(mEdge& e){
             if (e.isTerminal() || e.p->flags == (std::uint8_t) 64)
                 return e;
             auto r = e;
