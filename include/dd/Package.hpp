@@ -2341,14 +2341,6 @@ namespace dd {
                     return e;
             }
         }
-        
-        static bool isTranspose(mEdge& e){
-            auto tol = ComplexTable<>::tolerance();
-            auto v = CTEntry::val(e.w.r);
-            if (v >= transpose_weight_shift-1.0-tol && v <= transpose_weight_shift+1.0+tol)
-                return true;
-            return false;
-        }
 
         static bool hasOperation(mEdge& e, unsigned int operation_code){
             auto tol = ComplexTable<>::tolerance();
@@ -2378,70 +2370,6 @@ namespace dd {
             return e;
         }
 
-        mEdge shiftN2T(mEdge& e){
-            e.w = cn.lookup(transpose_weight_shift+CTEntry::val(e.w.r), CTEntry::val(e.w.i));
-            return e;
-        }
-
-        mEdge shiftT2N(mEdge& e){
-            e.w = cn.lookup(-transpose_weight_shift+CTEntry::val(e.w.r), CTEntry::val(e.w.i));
-            return e;
-        }
-        
-        mEdge reduceTranspose(mEdge& e){
-            mEdge r = reduceTransposeRecursive(e);
-            garbageCollect();
-            return r;
-        }
-
-        mEdge reduceTransposeRecursive(mEdge& e){
-            if (e.isTerminal() || e.p->flags == (std::uint8_t) 64)
-                return e;
-            auto r = e;
-            for (auto i = 0U; i < 4; i++) {
-                auto c = r.p->e[i];
-                if (c.isTerminal() || c.p->isSymmetric())
-                    continue;
-                auto prevNodeCount = mUniqueTable.getNodeCount();
-                auto t = transpose(c);
-                if (mUniqueTable.nodesAreEqual(t.p, c.p)){
-                    continue;
-                }
-                t = mUniqueTable.lookup(t);
-                if (mUniqueTable.getNodeCount() == prevNodeCount){
-                    // auto magt = ComplexNumbers::mag2(t.w);
-                    // only link transpose if transpose is more common (fewer T edges in final diagram)
-                    if (c.p->ref < t.p->ref){
-                        auto temp = c;
-                        c.p = t.p;
-                        c = shiftN2T(c);
-                        if (temp.p->ref)
-                            decRef(temp);
-                        incRef(t);
-                        // std::cout << isTranspose(e.p->e[j]);
-                    }
-                    else if (c.p->ref == t.p->ref){
-                        // keep node with lower id
-                        if (c.p->v >= t.p->v){
-                            auto temp = c;
-                            c.p = t.p;
-                            c = shiftN2T(c);
-                            if (temp.p->ref)
-                                decRef(temp);
-                            incRef(t);
-                        }
-                    }
-                    r.p->e[i] = c;
-                }
-            }
-            r.p->e[0] = reduceTranspose(r.p->e[0]);
-            r.p->e[1] = reduceTranspose(r.p->e[1]);
-            r.p->e[2] = reduceTranspose(r.p->e[2]);
-            r.p->e[3] = reduceTranspose(r.p->e[3]);
-            r.p->flags = (std::uint8_t) 64;
-            return r;
-        }
-
         mEdge reduceEdgeOperation(mEdge& e, unsigned int oc){
             mEdge r = reduceEdgeOperationRecursive(e, oc);
             garbageCollect();
@@ -2463,7 +2391,6 @@ namespace dd {
                 }
                 t = mUniqueTable.lookup(t);
                 if (mUniqueTable.getNodeCount() == prevNodeCount){
-                    // auto magt = ComplexNumbers::mag2(t.w);
                     // only link transpose if transpose is more common (fewer T edges in final diagram)
                     if (c.p->ref < t.p->ref){
                         auto temp = c;
@@ -2472,7 +2399,6 @@ namespace dd {
                         if (temp.p->ref)
                             decRef(temp);
                         incRef(t);
-                        // std::cout << isTranspose(e.p->e[j]);
                     }
                     else if (c.p->ref == t.p->ref){
                         // keep node with lower id
