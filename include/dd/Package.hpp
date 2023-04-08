@@ -87,9 +87,9 @@ namespace dd {
         // weight level shift for marking transposition in dd
         static constexpr fp transpose_weight_shift = 4.0;
         static constexpr fp ctranspose_weight_shift = 8.0;
-        static constexpr int num_operations = 2;
-        static constexpr fp operation_shift[3] = {0, 4.0, 8.0};
-        std::string operation_symbol = " TC";
+        static constexpr int num_operations = 3;
+        static constexpr fp operation_shift[4] = {0, 4.0, 8.0, 16.0};
+        std::string operation_symbol = " TCX";
 
 
         ///
@@ -2308,7 +2308,26 @@ namespace dd {
             return f;
         }
 
-        
+        mEdge applyXGate(const mEdge& a){
+            if (a.isTerminal())
+                return a;
+
+            std::array<mEdge, NEDGE> e{};
+            e[0] = a.p->e[2];
+            e[1] = a.p->e[3];
+            e[2] = a.p->e[0];
+            e[3] = a.p->e[1];
+
+            // create new top node
+            mEdge r = makeDDNode(a.p->v, e);
+            // adjust top weight
+            auto c = cn.getTemporary();
+            ComplexNumbers::mul(c, r.w, a.w);
+            r.w = cn.lookup(c);
+
+            return r;
+        }
+
         mEdge applyOperation(const mEdge& e, unsigned int oc){
             switch (oc)
             {
@@ -2316,6 +2335,8 @@ namespace dd {
                     return transpose(e);
                 case 2:
                     return conjugateTranspose(e);
+                case 3:
+                    return applyXGate(e);
                 case 0:
                     return e;
             }
