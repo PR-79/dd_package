@@ -2765,8 +2765,10 @@ namespace dd {
         void getMatrix(const mEdge& e, const Complex& amp, std::size_t i, std::size_t j, CMat& mat) {
             // calculate new accumulated amplitude
             auto r = e;
+            bool flag = false;
             if (isTranspose(r))
                 r = transpose(shiftT2N(r));
+                flag = true;
 
             auto c = cn.mulCached(r.w, amp);
             
@@ -2791,7 +2793,8 @@ namespace dd {
                 getMatrix(r.p->e[3], c, x, y, mat);
                 
             cn.returnToCache(c);
-            r = transpose(shiftN2T(r));
+            if (flag)
+                r = transpose(shiftN2T(r));
         }
 
         CMat getDensityMatrix(dEdge& e) {
