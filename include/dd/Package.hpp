@@ -86,6 +86,11 @@ namespace dd {
 
         // weight level shift for marking transposition in dd
         static constexpr fp transpose_weight_shift = 4.0;
+        static constexpr fp ctranspose_weight_shift = 8.0;
+        static constexpr int num_operations = 2;
+        static constexpr fp operation_shift[3] = {0, 4.0, 8.0};
+        std::string operation_symbol = " TC";
+
 
         ///
         /// Construction, destruction, information and reset
@@ -2303,12 +2308,53 @@ namespace dd {
             return f;
         }
 
+        
+        mEdge applyOperation(const mEdge& e, unsigned int oc){
+            switch (oc)
+            {
+                case 1:
+                    return transpose(e);
+                case 2:
+                    return conjugateTranspose(e);
+                case 0:
+                    return e;
+            }
+        }
+        
         static bool isTranspose(mEdge& e){
             auto tol = ComplexTable<>::tolerance();
             auto v = CTEntry::val(e.w.r);
             if (v >= transpose_weight_shift-1.0-tol && v <= transpose_weight_shift+1.0+tol)
                 return true;
             return false;
+        }
+
+        static bool hasOperation(mEdge& e, unsigned int operation_code){
+            auto tol = ComplexTable<>::tolerance();
+            auto v = CTEntry::val(e.w.r);
+            if (v >= operation_shift[operation_code]-1.0-tol && v <= operation_shift[operation_code]+1.0+tol)
+                return true;
+            return false;
+        }
+
+        static unsigned int getOperationCode(mEdge& e){
+            auto tol = ComplexTable<>::tolerance();
+            auto v = CTEntry::val(e.w.r);
+            for (int i=1; i<num_operations+1; i++){
+                if (v >= operation_shift[i]-1.0-tol && v <= operation_shift[i]+1.0+tol)
+                    return i;
+            }
+            return 0;
+        }        
+
+        mEdge shiftN2O(mEdge& e, unsigned int oc){
+            e.w = cn.lookup(operation_shift[oc]+CTEntry::val(e.w.r), CTEntry::val(e.w.i));
+            return e;
+        }
+
+        mEdge shiftO2N(mEdge& e, unsigned int oc){
+            e.w = cn.lookup(-operation_shift[oc]+CTEntry::val(e.w.r), CTEntry::val(e.w.i));
+            return e;
         }
 
         mEdge shiftN2T(mEdge& e){
@@ -2371,6 +2417,60 @@ namespace dd {
             r.p->e[1] = reduceTranspose(r.p->e[1]);
             r.p->e[2] = reduceTranspose(r.p->e[2]);
             r.p->e[3] = reduceTranspose(r.p->e[3]);
+            r.p->flags = (std::uint8_t) 64;
+            return r;
+        }
+
+        mEdge reduceEdgeOperation(mEdge& e, unsigned int oc){
+            mEdge r = reduceEdgeOperationRecursive(e, oc);
+            garbageCollect();
+            return r;
+        }
+
+        mEdge reduceEdgeOperationRecursive(mEdge& e, unsigned int oc){
+            if (e.isTerminal() || e.p->flags == (std::uint8_t) 64)
+                return e;
+            auto r = e;
+            for (auto i = 0U; i < 4; i++) {
+                auto c = r.p->e[i];
+                if (c.isTerminal())
+                    continue;
+                auto prevNodeCount = mUniqueTable.getNodeCount();
+                auto t = applyOperation(c, oc);
+                if (mUniqueTable.nodesAreEqual(t.p, c.p)){
+                    continue;
+                }
+                t = mUniqueTable.lookup(t);
+                if (mUniqueTable.getNodeCount() == prevNodeCount){
+                    // auto magt = ComplexNumbers::mag2(t.w);
+                    // only link transpose if transpose is more common (fewer T edges in final diagram)
+                    if (c.p->ref < t.p->ref){
+                        auto temp = c;
+                        c.p = t.p;
+                        c = shiftN2O(c, oc);
+                        if (temp.p->ref)
+                            decRef(temp);
+                        incRef(t);
+                        // std::cout << isTranspose(e.p->e[j]);
+                    }
+                    else if (c.p->ref == t.p->ref){
+                        // keep node with lower id
+                        if (c.p->v >= t.p->v){
+                            auto temp = c;
+                            c.p = t.p;
+                            c = shiftN2O(c, oc);
+                            if (temp.p->ref)
+                                decRef(temp);
+                            incRef(t);
+                        }
+                    }
+                    r.p->e[i] = c;
+                }
+            }
+            r.p->e[0] = reduceEdgeOperationRecursive(r.p->e[0], oc);
+            r.p->e[1] = reduceEdgeOperationRecursive(r.p->e[1], oc);
+            r.p->e[2] = reduceEdgeOperationRecursive(r.p->e[2], oc);
+            r.p->e[3] = reduceEdgeOperationRecursive(r.p->e[3], oc);
             r.p->flags = (std::uint8_t) 64;
             return r;
         }
@@ -2766,8 +2866,10 @@ namespace dd {
             // calculate new accumulated amplitude
             auto r = e;
             bool flag = false;
-            if (isTranspose(r))
-                r = transpose(shiftT2N(r));
+
+            auto oc = getOperationCode(r);
+            if (oc)
+                r = applyOperation(shiftO2N(r, oc), oc);
                 flag = true;
 
             auto c = cn.mulCached(r.w, amp);
@@ -2794,7 +2896,7 @@ namespace dd {
                 
             cn.returnToCache(c);
             if (flag)
-                r = transpose(shiftN2T(r));
+                r = applyOperation(shiftN2O(r, oc), oc);
         }
 
         CMat getDensityMatrix(dEdge& e) {

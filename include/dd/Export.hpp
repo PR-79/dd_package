@@ -756,9 +756,10 @@ namespace dd {
                         const std::int64_t edgeIdx = edge.isTerminal() ? -1 : nodeIndex[edge.p];
                         
                         auto ddp= std::make_unique<dd::Package<>>(1);
-                        if (ddp->isTranspose(edge)){
+                        auto oc = ddp->getOperationCode(edge);
+                        if (oc){
                             auto tol = ComplexTable<>::tolerance();
-                            auto re = CTEntry::val(edge.w.r) - ddp->transpose_weight_shift;
+                            auto re = CTEntry::val(edge.w.r) - ddp->operation_shift[oc];
                             auto im = CTEntry::val(edge.w.i);
                             os << edgeIdx << " ";
                             if (std::abs(re) > tol)
@@ -768,7 +769,7 @@ namespace dd {
                                     os<<"+";
                                 os<<im<<"i";
                             }
-                            os << "T";
+                            os << ddp->operation_symbol[oc];
                         }
                         else
                             os << edgeIdx << " " << edge.w.toString(false, 16);
